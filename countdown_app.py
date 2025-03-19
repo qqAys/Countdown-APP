@@ -65,6 +65,7 @@ class CountdownApp(tk.Tk):
         self.geometry(size_geo)
         self.resizable(False, False)
         self.attributes("-topmost", True)
+        self.iconbitmap("favicon.ico")
 
         menubar = tk.Menu(self)
         self.config(menu=menubar)
