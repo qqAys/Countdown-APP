@@ -1,15 +1,26 @@
 import json
 import os
 import tkinter as tk
+from ctypes import windll
 from tkinter import ttk, messagebox
+
+import winsound
 
 APP_NAME_ENGLISH = "Countdown APP"
 APP_NAME_CHINESE = "倒计时APP"
-VERSION = "0.0.0.1"
+VERSION = "0.0.0.2"
 AUTHOR = "Jinx@qqAys"
 URL = "https://github.com/qqAys/Countdown-APP"
 
 CONFIG_FILE = "countdown_app_config.json"
+
+
+CONFIG_LOAD_ERROR = "加载配置出错"
+CONFIG_SAVE_ERROR = "保存配置出错"
+VALUE_ERROR = "值错误"
+VALUE_DUPLICATE = "值重复"
+OPERATION_ERROR = "操作错误"
+OPERATION_SUCCESS = "操作成功"
 
 
 def load_config():
@@ -19,7 +30,7 @@ def load_config():
                 config = json.load(f)
                 return config
         except Exception as e:
-            messagebox.showerror("加载配置出错", f"加载配置出错: {e}")
+            messagebox.showerror(CONFIG_LOAD_ERROR, f"加载配置出错: {e}")
     return {}
 
 
@@ -28,13 +39,19 @@ def save_config(config):
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(config, f)
     except Exception as e:
-        messagebox.showerror("保存配置出错", f"保存配置出错: {e}")
+        messagebox.showerror(CONFIG_SAVE_ERROR, f"保存配置出错: {e}")
 
 
 class CountdownApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(APP_NAME_CHINESE)
+
+        # 高DPI适配
+        windll.shcore.SetProcessDpiAwareness(1)
+        scale_factor = windll.shcore.GetScaleFactorForDevice(0)
+        self.tk.call('tk', 'scaling', scale_factor / 75)
+
         width = 350
         height = 500
         screenwidth = self.winfo_screenwidth()
@@ -47,6 +64,7 @@ class CountdownApp(tk.Tk):
         )
         self.geometry(size_geo)
         self.resizable(False, False)
+        self.attributes("-topmost", True)
 
         menubar = tk.Menu(self)
         self.config(menu=menubar)
@@ -136,15 +154,15 @@ class CountdownApp(tk.Tk):
                 save_config(self.config_data)
                 self.update_listbox()
             else:
-                messagebox.showwarning("值重复", f"自定义时间 {t} 秒已经存在")
+                messagebox.showwarning(VALUE_DUPLICATE, f"自定义时间 {t} 秒已经存在")
         except ValueError:
-            messagebox.showerror("值错误", "请输入有效的正整数秒数")
+            messagebox.showerror(VALUE_ERROR, "请输入有效的正整数秒数")
 
     def delete_custom_time(self):
         try:
             selection = self.listbox.curselection()
             if not selection:
-                messagebox.showerror("操作错误", "请选择一个要删除的自定义时间")
+                messagebox.showerror(OPERATION_ERROR, "请选择一个要删除的自定义时间")
                 return
             index = selection[0]
             t_str = self.listbox.get(index)
@@ -153,9 +171,9 @@ class CountdownApp(tk.Tk):
             self.config_data["custom_times"] = self.custom_times
             save_config(self.config_data)
             self.update_listbox()
-            messagebox.showinfo("删除成功", f"自定义时间 {t} 秒已删除")
+            messagebox.showinfo(OPERATION_SUCCESS, f"自定义时间 {t} 秒已删除")
         except Exception as e:
-            messagebox.showerror("错误", f"删除失败: {e}")
+            messagebox.showerror(OPERATION_ERROR, f"删除失败: {e}")
 
     def start_input_countdown(self):
         try:
@@ -164,7 +182,7 @@ class CountdownApp(tk.Tk):
                 raise ValueError("倒计时时间必须为正整数")
             self.start_countdown(t)
         except ValueError:
-            messagebox.showerror("错误", "请输入有效的正整数秒数")
+            messagebox.showerror(VALUE_ERROR, "请输入有效的正整数秒数")
 
     def start_list_countdown(self):
         try:
@@ -175,9 +193,9 @@ class CountdownApp(tk.Tk):
                 t = int(t_str.replace("秒", ""))
                 self.start_countdown(t)
             else:
-                messagebox.showerror("错误", "请选择一个保存的自定义时间")
+                messagebox.showerror(OPERATION_ERROR, "请选择一个保存的自定义时间")
         except Exception as e:
-            messagebox.showerror("错误", f"无法启动倒计时: {e}")
+            messagebox.showerror(OPERATION_ERROR, f"无法启动倒计时: {e}")
 
     def start_countdown(self, seconds):
         CountdownWindow(self, seconds)
@@ -192,6 +210,7 @@ class CountdownWindow(tk.Toplevel):
         self.geometry("250x80")
         self.resizable(False, False)
         self.attributes("-topmost", True)
+        self.attributes("-toolwindow", True)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         # 保存原始背景色
         self.original_bg = self.cget("bg")
@@ -227,17 +246,16 @@ class CountdownWindow(tk.Toplevel):
             self.flash_effect(0)
 
     def flash_effect(self, count):
-        # 闪烁
-        if count > -1:
-            # 每次交替
-            new_bg = "red" if count % 2 == 0 else self.original_bg
-            self.configure(bg=new_bg)
-            self.label.configure(background=new_bg)
-            self.after(200, lambda: self.flash_effect(count + 1))
-        else:
-            # 最后恢复原色
-            self.configure(bg=self.original_bg)
-            self.label.configure(background=self.original_bg)
+        # 声光闪烁
+        if count < 100:
+            try:
+                winsound.Beep(2500, 15)
+            except:
+                pass
+        new_bg = "red" if count % 2 == 0 else self.original_bg
+        self.configure(bg=new_bg)
+        self.label.configure(background=new_bg)
+        self.after(300, lambda: self.flash_effect(count + 1))
 
     def on_close(self):
         self.running = False
