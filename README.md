@@ -1,6 +1,6 @@
-# 倒计时APP Countdown-APP
+# ![](./favicon.ico) 倒计时APP Countdown-APP
 
-纯tkinter编写的倒计时APP，可运行在windows下。
+纯tkinter编写的倒计时APP，可运行在Windows下。
 
 ## 特性
 
@@ -9,6 +9,7 @@
  - 自定义倒计时
  - 配置记忆
  - 到点闪烁提醒
+ - 全局置顶
 
 ## 截图
 
